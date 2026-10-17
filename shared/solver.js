@@ -1,9 +1,8 @@
 // Recipe solver: a mixed-integer program over item quantities, solved with HiGHS (see milp.js).
 //
 // Variables (per group of interchangeable items, i.e. identical stats and weight):
-//   own|*    items taken from inventory   cost ~1 per item + weight tie-break
-//   craft|*  foods crafted                cost per craft + the nutrients it uses ("plan" mode only;
-//                                         nutrients in stock are cheap, missing ones cost by scarcity)
+//   own|*    items taken from inventory   cost ~1 per item, plus a food's nutrient value (what regathering it costs)
+//   craft|*  foods crafted                cost per craft + the gathering cost of the nutrients it uses ("plan" only)
 //   find|*   memories still to be found   high cost, plus a penalty for stats nobody asked for ("plan" mode only)
 // Constraints: per required attribute raw >= inverse-DR(required) (+epsilon for strict), pod weight cap,
 // quantity bounds. Optionally, equal-or-higher-tier professions that would also match are excluded with
@@ -14,28 +13,28 @@ import {
 } from './rules.js';
 
 const EPS = 1e-3;
-const FIND_CAP = 5;
+export const FIND_CAP = 5;
 // A memory to find costs far more than crafting a food (~5-50) and much more than using an owned item (~1).
-const FIND_BASE_COST = 200;
-const FIND_SPILL_COST = 10;
+export const FIND_BASE_COST = 200;
+export const FIND_SPILL_COST = 10;
 
 function itemKey(kind, id) {
   return `${kind}:${id}`;
 }
 
-function catalog(memories, foods) {
+export function catalog(memories, foods) {
   return [
     ...memories.map((row) => ({ kind: 'memory', id: row.id, row })),
     ...foods.map((row) => ({ kind: 'food', id: row.id, row })),
   ];
 }
 
-function owned(inventory, kind, id) {
+export function owned(inventory, kind, id) {
   return Math.max(0, Math.floor(Number(inventory?.[kind]?.[id] ?? 0)));
 }
 
 /** Raw-total bounds [min, max] that satisfy one requirement. */
-function bounds(req, s) {
+export function bounds(req, s) {
   const inv = (v) => inverseEffective(Math.max(0, v), s);
   switch (req.type) {
     case 'GreaterOrEqual': return [inv(req.required), Infinity];
@@ -53,12 +52,18 @@ function blockThreshold(req, s) {
   return null;
 }
 
-// Per crafted item, on top of the nutrients it consumes.
-const CRAFT_BASE_COST = 5;
-// Using nutrients already in stock costs this fraction of buying/gathering more.
-const STOCK_DISCOUNT = 0.1;
+// Per crafted item (crafting time), on top of the nutrients it consumes.
+export const CRAFT_BASE_COST = 5;
 
-function hasStats(row) {
+// Every nutrient can be gathered again; what it costs is the time to gather it. Stock and owned food are therefore
+// valued at that cost, not treated as free: all 41 humans get made eventually, so a unit spent on this human is a
+// unit gathered for the next. A stock discount used to make stocked Bio Flesh look nearly free, and the planner put
+// Ultimate Genesis into Tier 1 humans that seaweed foods cover.
+export function nutrientValue(row, s) {
+  return NUTRIENTS.reduce((sum, n) => sum + Number(row[n] ?? 0) * (s.nutrientCost[n] ?? 1), 0);
+}
+
+export function hasStats(row) {
   return ALL_ATTRS.some((a) => Number(row[a] ?? 0) !== 0);
 }
 
@@ -108,12 +113,6 @@ export function solve({
       const stat = Number(it.row[a] ?? 0);
       if (stat) v[`a_${a}`] = stat;
     }
-    if (name.startsWith('craft|')) {
-      for (const n of NUTRIENTS) {
-        const amount = Number(it.row[n] ?? 0);
-        if (amount) v[`nu_${n}`] = amount;
-      }
-    }
     variables[name] = v;
     ints[name] = 1;
     constraints[`cap_${name}`] = { max: cap };
@@ -138,9 +137,10 @@ export function solve({
     const w = Number(g.row.item_weight ?? 0);
     const weightCap = w > 0 ? Math.floor(s.podCapacity / w) : 999;
     const have = g.members.reduce((n, it) => n + owned(inventory, it.kind, it.id), 0);
-    addVar(`own|${id}`, g, 1 + w / 1000, Math.min(have, weightCap));
+    const value = g.kind === 'food' ? nutrientValue(g.row, s) : 0;
+    addVar(`own|${id}`, g, 1 + value + w / 1000, Math.min(have, weightCap));
     if (mode !== 'plan') continue;
-    if (g.kind === 'food') addVar(`craft|${id}`, g, CRAFT_BASE_COST + w / 1000, weightCap);
+    if (g.kind === 'food') addVar(`craft|${id}`, g, CRAFT_BASE_COST + value + w / 1000, weightCap);
     else if (g.members.some((it) => !it.row.unverified)) {
       // Prefer memories whose stats go where they are needed: spillover into other attributes makes other
       // professions match too (and "all stats" memories are rare finds).
@@ -156,22 +156,6 @@ export function solve({
     const beaten = findCandidates.some((d, j) => j !== i && dominates(d, c) && (!dominates(c, d) || j < i));
     if (!beaten) addVar(`find|${c.id}`, c.g, c.cost, c.cap);
   });
-
-  if (mode === 'plan') {
-    // Nutrients consumed by crafting come from stock first (cheap), then from new gathering (scarcity cost).
-    const stock = inventory?.nutrient ?? {};
-    for (const n of NUTRIENTS) {
-      const row = `nu_${n}`;
-      constraints[row] = { max: 0 };
-      const have = Math.max(0, Number(stock[n] ?? 0));
-      const unit = s.nutrientCost[n] ?? 1;
-      if (have > 0) {
-        variables[`stock|${n}`] = { cost: unit * STOCK_DISCOUNT, [row]: -1, [`cap_stock_${n}`]: 1 };
-        constraints[`cap_stock_${n}`] = { max: have };
-      }
-      variables[`extra|${n}`] = { cost: unit, [row]: -1 };
-    }
-  }
 
   const others = professions.filter((p) => p.id !== profession.id);
   const blocked = new Set();

@@ -26,8 +26,8 @@ This branch merged `feature/admiring-albattani-snrue4`, the full app another ses
 | `client/api.js` routes to the local API instead of `fetch` | |
 | HiGHS loader reads `globalThis.HIGHS_LOADER_OPTIONS`; the worker sets `locateFile` to the bundled `highs.wasm` | `shared/milp.js` |
 | Vite: `base` from `BASE_PATH` (default `/caretaker-planner/`), `target: es2022` (top-level await), ES workers | `vite.config.js` |
-| Pages deploy workflow (build only; doesn't need the save fixtures) | `.github/workflows/pages.yml` |
-| Tests: 20/20 pass. `test/api.test.js` now drives the in-browser API in Node, with in-memory storage and compute called directly | `npm test` |
+| Pages deploy workflow: Node tests, build, browser journeys, deploy (save tests skip without fixtures) | `.github/workflows/pages.yml` |
+| Tests (now 29 Node tests + 4 journeys) pass. `test/api.test.js` now drives the in-browser API in Node, with in-memory storage and compute called directly | `npm test` |
 | `npm run build` succeeds | |
 
 **Not verified yet:** nothing has run in a real browser. The build warns that `node:module`/`module` are "externalized" in `highs` and `ooz-wasm`. Those should be Node-only branches, but confirm at runtime.
@@ -56,10 +56,12 @@ This is the biggest risk. As far as I remember, Chromium's File System Access bl
   - the path hint, and the junction tip with a Copy button. The tip is worded conditionally until step 1 is tested on Windows.
 
   Checked in the built preview: both saves import by drag and drop, and the overview and solver work under `/caretaker-planner/`. The real folder picker, the permission prompts and auto-import still need a check in Chrome on Windows (step 1).
-- `client/pages/DataEditor.jsx` (Settings): remove the `saveDir` text field (lines ~189 and ~261). Add **Export backup** (download `GET /api/backup` as JSON) and **Import backup** (`POST /api/backup`), since all data now lives in the browser.
-- README: rewrite "Run it" and "How it works" for the static app: the Pages URL, `npm run dev`, Chrome/Edge for the folder feature, data in browser storage, and the GPL note for `ooz-wasm`.
+- **Done (2026-10-17):** Settings has no `saveDir` field any more, and has **Export backup** / **Import backup**
+  (journey: `e2e/backup.spec.js`). The README describes the static app.
 
-### 3. Committees page (the user's latest request)
+### 3. Committees page
+
+**Done (2026-10-17):** `#/committees`, data in `shared/committees.js`, sources in `docs/research/2026-10-17-committees.md`. The order below was revised after that research: quest-giving committees first, then the age-21/22 ones. The save parser now reads `CommitteeData` and `Quests`; a committee counts as launched when all four members are delivered. Journeys in `e2e/committees.spec.js`. The original brief follows.
 
 Add a page (`#/committees`, nav item "Committees") showing the 10 committees in the recommended order below. Each member links to `#/p/<id>` with its live status from the overview (Growable / Close / Far). Also show a per-committee "ready" count (members growable now). Use `COMMITTEES` from the research script, or move it into `shared/`.
 
@@ -90,7 +92,9 @@ Costs come from `docs/research/human-plan-result.json` (weighted nutrient cost, 
 
 ### 5. Test in a browser
 
-The repo has no Playwright setup yet. Run `npm run build && npm run preview`, then:
+**Done (2026-10-17):** Playwright journeys run against the built site under the Pages base path (`npm run test:e2e`), including a real beta-save import. Still open: the folder picker on Windows (step 1).
+
+Original notes: Run `npm run build && npm run preview`, then:
 
 - drop `test/fixtures/beta-update6.sav` on the Import page and check the import summary (the beta save has more than 100 memories);
 - open a profession and solve it;

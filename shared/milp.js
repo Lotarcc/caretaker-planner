@@ -45,11 +45,12 @@ export function toLp(model) {
   return { lp: lines.join('\n'), vid };
 }
 
-export function solveMilp(model, { timeLimitMs = 2000 } = {}) {
+/** `gap`: relative optimality gap to stop at; a whole-council model only needs to be close to optimal. */
+export function solveMilp(model, { timeLimitMs = 2000, gap = 1e-6 } = {}) {
   const { lp, vid } = toLp(model);
   let out;
   try {
-    out = highs.solve(lp, { time_limit: timeLimitMs / 1000, output_flag: false, mip_rel_gap: 1e-6 });
+    out = highs.solve(lp, { time_limit: timeLimitMs / 1000, output_flag: false, mip_rel_gap: gap });
   } catch (err) {
     // A failed solve can leave the WASM instance unusable; start a fresh one next time.
     highsLoader(loaderOptions()).then((h) => { highs = h; });

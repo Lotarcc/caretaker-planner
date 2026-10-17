@@ -54,7 +54,7 @@ export default function ImportPage({ ctx }) {
         onDragLeave={() => setDrag(false)}
         onDrop={(e) => { e.preventDefault(); setDrag(false); onFiles(e.dataTransfer.files); }}
       >
-        <input type="file" accept=".sav" hidden onChange={(e) => onFiles(e.target.files)} disabled={ctx.importing} />
+        <input type="file" accept=".sav" hidden aria-label="Save file" onChange={(e) => onFiles(e.target.files)} disabled={ctx.importing} />
         {ctx.importing ? <Spinner label="Reading save… (a few seconds)" /> : (
           <>
             <strong>Drop a .sav file here</strong>

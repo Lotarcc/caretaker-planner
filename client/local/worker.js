@@ -5,6 +5,7 @@ import highsWasm from 'highs/runtime?url';
 globalThis.HIGHS_LOADER_OPTIONS = { locateFile: () => highsWasm };
 
 const solver = import('../../shared/solver.js');
+const council = import('../../shared/council.js');
 const save = import('../../shared/save/items.js');
 
 self.onmessage = async ({ data: { id, op, args } }) => {
@@ -13,6 +14,7 @@ self.onmessage = async ({ data: { id, op, args } }) => {
     if (op === 'extract') result = (await save).extractSave(new Uint8Array(args.bytes));
     else if (op === 'overview') result = (await solver).overview(args);
     else if (op === 'solve') result = (await solver).solve(args);
+    else if (op === 'council') result = (await council).planCouncil(args);
     else throw new Error(`Unknown op ${op}`);
     self.postMessage({ id, result });
   } catch (err) {

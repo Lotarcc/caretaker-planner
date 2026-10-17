@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ALL_ATTRS, COMPARE_TYPES, DEFAULT_SETTINGS, FOOD_ATTRS, MEMORY_ATTRS, NUTRIENTS, pretty,
 } from '../../shared/rules.js';
@@ -186,7 +186,7 @@ function RowForm({ ctx, table, row, onDeleted }) {
 }
 
 function Settings({ ctx }) {
-  const initial = useMemo(() => ({ ...ctx.settings, saveDir: ctx.saveDir ?? '' }), [ctx.settings, ctx.saveDir]);
+  const initial = ctx.settings;
   const [draft, setDraft] = useState(initial);
   useEffect(() => setDraft(initial), [initial]);
   const dirty = JSON.stringify(draft) !== JSON.stringify(initial);
@@ -214,6 +214,32 @@ function Settings({ ctx }) {
     ctx.notify('Data reloaded from source', 'good');
   };
   const n = (v) => (v === '' ? 0 : Number(v));
+  const fileInput = useRef(null);
+  // Everything lives in this browser's storage, so a backup file is the only way to move or keep it.
+  const exportBackup = async () => {
+    try {
+      const doc = await api.get('/api/backup');
+      const url = URL.createObjectURL(new Blob([JSON.stringify(doc, null, 1)], { type: 'application/json' }));
+      const a = Object.assign(document.createElement('a'), { href: url, download: `caretaker-planner-${new Date().toISOString().slice(0, 10)}.json` });
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      ctx.notify(`Couldn't export a backup: ${e.message}`, 'bad');
+    }
+  };
+  const importBackup = async (file) => {
+    if (!file) return;
+    try {
+      if (!window.confirm(`Replace everything in the planner with "${file.name}"?`)) return;
+      await api.post('/api/backup', JSON.parse(await file.text()));
+      await ctx.reload();
+      ctx.notify('Backup restored', 'good');
+    } catch (e) {
+      ctx.notify(`Couldn't restore the backup: ${e.message}`, 'bad');
+    } finally {
+      fileInput.current.value = '';
+    }
+  };
 
   return (
     <div className="panel settings">
@@ -247,19 +273,13 @@ function Settings({ ctx }) {
           <label className="field"><span>"Close" when coverage ≥</span><input className="input" type="number" step="0.05" min="0" max="1" value={draft.closeThreshold} onChange={(e) => set('closeThreshold', n(e.target.value))} /></label>
         </div>
 
-        <h3>Nutrient scarcity</h3>
-        <p className="muted small">How costly each nutrient is to gather. The craft planner uses nutrients you have first, then the cheapest ones.</p>
+        <h3>Gathering cost</h3>
+        <p className="muted small">Time to gather one unit of each nutrient, relative to seaweed. Everything can be gathered again, so the craft planner picks the foods that take the least gathering in total. Nutrients in stock and foods you own count at the same cost, so they aren't spent on humans that cheaper foods cover.</p>
         <div className="attr-grid">
           {NUTRIENTS.map((k) => (
             <label key={k} className="field"><span>{pretty(k)}</span><input className="input" type="number" step="0.5" value={draft.nutrientCost[k]} onChange={(e) => setIn('nutrientCost', k, n(e.target.value))} /></label>
           ))}
         </div>
-
-        <h3>Save folder</h3>
-        <label className="field wide">
-          <span>Folder with .sav files (leave empty to auto-detect %LOCALAPPDATA%\Voyage\Saved\SaveGames)</span>
-          <input className="input mono" value={draft.saveDir} onChange={(e) => set('saveDir', e.target.value)} placeholder="C:\Users\you\AppData\Local\Voyage\Saved\SaveGames" />
-        </label>
 
         <div className="actions">
           <button className="btn btn-primary" type="submit" disabled={!dirty}>Save settings</button>
@@ -267,6 +287,14 @@ function Settings({ ctx }) {
           <button className="btn btn-danger push-right" type="button" onClick={resetData}>Reload game data from source</button>
         </div>
       </form>
+
+      <h3>Backup</h3>
+      <p className="muted small">The planner keeps your data, edits and grown log in this browser only. Export a backup to keep it or move it to another browser.</p>
+      <div className="actions">
+        <button className="btn" type="button" onClick={exportBackup}>Export backup</button>
+        <button className="btn" type="button" onClick={() => fileInput.current.click()}>Import backup…</button>
+        <input ref={fileInput} type="file" accept="application/json,.json" hidden aria-label="Backup file" onChange={(e) => importBackup(e.target.files[0])} />
+      </div>
     </div>
   );
 }

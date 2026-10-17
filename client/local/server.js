@@ -2,6 +2,7 @@
 // talk to it the same way; data lives in browser storage and heavy work runs in Web Workers.
 import { Store, TABLES } from './store.js';
 import { mapToInventory } from '../../shared/importer.js';
+import { committeeProgress, humansToPlan } from '../../shared/committees.js';
 
 export class HttpError extends Error {
   constructor(status, message) {
@@ -13,7 +14,7 @@ export class HttpError extends Error {
 /**
  * @param {object} deps
  * @param {Store}  deps.store
- * @param {{overview: Function, solve: Function, extract: Function}} deps.compute
+ * @param {{overview: Function, solve: Function, council: Function, extract: Function}} deps.compute
  * @param {object} [deps.folder]  save-folder access (client/local/folder.js); absent in tests
  */
 export function createLocalApi({ store = new Store(), compute, folder = null }) {
@@ -62,7 +63,17 @@ export function createLocalApi({ store = new Store(), compute, folder = null }) 
     return { settings: store.rules() };
   });
 
-  on('GET', '/api/backup', () => store.exportAll());
+  // A backup may end up attached to a bug report, so it leaves out where the save came from (the slot name and
+  // path carry the Steam id).
+  on('GET', '/api/backup', () => {
+    const doc = store.exportAll();
+    const last = doc.settings?.lastImport;
+    if (last) {
+      if (last.meta) delete last.meta.slot;
+      if (last.source) delete last.source.path;
+    }
+    return doc;
+  });
   on('POST', '/api/backup', ({ body }) => {
     store.importAll(body);
     return { ok: true };
@@ -86,7 +97,15 @@ export function createLocalApi({ store = new Store(), compute, folder = null }) 
     const extracted = await compute.extract(bytes);
     const { inventory, summary } = mapToInventory(extracted, { memories: store.list('memories'), foods: store.list('foods') });
     store.replaceInventory(inventory);
-    const record = { ...summary, source, meta: extracted.meta, humans: extracted.humans, importedAt: new Date().toISOString() };
+    const record = {
+      ...summary,
+      source,
+      meta: extracted.meta,
+      humans: extracted.humans,
+      committees: extracted.committees,
+      quests: extracted.quests,
+      importedAt: new Date().toISOString(),
+    };
     store.setSetting('lastImport', record);
     return record;
   };
@@ -168,6 +187,15 @@ export function createLocalApi({ store = new Store(), compute, folder = null }) 
       mode: body.mode === 'plan' ? 'plan' : 'inventory',
       exclusive: body.exclusive !== false,
     });
+  });
+
+  // Every human still to make (committee seats without a launched or grown human, plus Platform Omega), planned
+  // together so scarce memories and owned food go where they save the most.
+  on('POST', '/api/council', () => {
+    const input = planInput();
+    const lastImport = store.getSetting('lastImport');
+    const humans = humansToPlan(committeeProgress({ professions: input.professions, lastImport }), lastImport);
+    return compute.council({ ...input, humans });
   });
 
   // ---- growing ----
