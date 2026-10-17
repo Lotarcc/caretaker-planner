@@ -132,11 +132,23 @@ def load():
     return items, reqs
 
 
+NUTRIENT_ITEM = {
+    "Protein": "DA_Material_Food_Protein", "Fat": "DA_Material_Food_Fat",
+    "Carbohydrate": "DA_Material_Food_Carbohydrate", "Calcium": "DA_Material_Food_Calcium",
+    "VitaminD": "DA_Material_Food_Vitamind", "Omega3": "DA_Material_Food_Omega-3",
+    "Bioregulator": "DA_Material_Food_Bioregulator", "Nanite_Nutrient": "DA_Material_Food_Nanite_Nutrient",
+    "Mitochondrial_Amplifier": "DA_Material_Food_MitochondrialAmplifier",
+}
+
+
 def load_supply(items, path):
+    """Item supply by name, plus nutrient stock under "nutrient:<name>"."""
     raw = json.load(open(path))["items"]
     supply = {}
     for it in items:
         supply[it["name"]] = sum(raw.get(a, 0) for a in it["aliases"])
+    for n, asset in NUTRIENT_ITEM.items():
+        supply["nutrient:" + n] = raw.get(asset, 0)
     return supply
 
 
@@ -162,14 +174,16 @@ def solve(humans, items, reqs, supply, time_limit=600):
                 ys.append(y)
             prob += pulp.lpSum(ys) >= 1
 
-    crafted, missing, cost_terms = {}, {}, []
+    crafted, missing, short, cost_terms = {}, {}, {}, []
+    stock = {n: supply.get("nutrient:" + n, 0) for n in NUTRIENT_COST} if supply is not None else None
     for i, it in enumerate(items):
         used = pulp.lpSum(x[h, i] for h in range(len(humans)))
         have = supply.get(it["name"], 0) if supply is not None else None
         if it["kind"] == "food":
             crafted[i] = pulp.LpVariable(f"craft_{i}", lowBound=0, cat=pulp.LpInteger)
             prob += crafted[i] >= used - (have or 0)
-            cost_terms.append(it["cost"] * crafted[i])
+            if stock is None:
+                cost_terms.append(it["cost"] * crafted[i])
             cost_terms.append(0.01 * used)  # prefer fewer items when free
         else:
             cost_terms.append(it["cost"] * used)
@@ -177,6 +191,14 @@ def solve(humans, items, reqs, supply, time_limit=600):
                 missing[i] = pulp.LpVariable(f"miss_{i}", lowBound=0, cat=pulp.LpInteger)
                 prob += used <= have + missing[i]
                 cost_terms.append(MISSING_MEMORY_COST * missing[i])
+    if stock is not None:
+        # Nutrients already in stock are nearly free; only the shortfall costs full price.
+        for n, w in NUTRIENT_COST.items():
+            need = pulp.lpSum(crafted[i] * items[i]["nutrients"].get(n, 0) for i in crafted)
+            short[n] = pulp.LpVariable(f"short_{n}", lowBound=0)
+            prob += short[n] >= need - stock[n]
+            cost_terms.append(w * short[n])
+            cost_terms.append(0.05 * w * need)
     prob += pulp.lpSum(cost_terms)
     prob.solve(pulp.PULP_CBC_CMD(msg=False, timeLimit=time_limit, gapRel=0.0))
     status = pulp.LpStatus[prob.status]
@@ -206,6 +228,10 @@ def solve(humans, items, reqs, supply, time_limit=600):
         for nut, v in food_by_name[name]["nutrients"].items():
             nutrients[nut] = nutrients.get(nut, 0) + v * n
     totals["nutrients_to_craft"] = nutrients
+    if stock is not None:
+        totals["nutrient_stock"] = stock
+        totals["nutrients_to_gather"] = {n: max(0, nutrients.get(n, 0) - stock[n])
+                                         for n in NUTRIENT_COST if nutrients.get(n, 0) > stock[n]}
     return plans, totals
 
 
@@ -266,8 +292,9 @@ def main():
     print("status", totals["status"], "objective", round(totals["objective"], 2))
     for pl in plans:
         print(f"{pl['label']:55s} cost {pl['craft_cost_if_all_crafted']:6.0f}  {pl['pod_kg']:5.1f}kg  {pl['items']}")
-    for k in ("food_used", "food_to_craft", "nutrients_to_craft", "memories_used", "memories_to_find"):
-        print(k, totals[k])
+    for k in ("food_used", "food_to_craft", "nutrients_to_craft", "nutrient_stock", "nutrients_to_gather",
+              "memories_used", "memories_to_find"):
+        print(k, totals.get(k))
 
 
 if __name__ == "__main__":
