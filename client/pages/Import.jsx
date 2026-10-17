@@ -1,15 +1,32 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { pretty } from '../../shared/rules.js';
 import { api } from '../api.js';
 import { Badge, Empty, Spinner, timeAgo } from '../components/ui.jsx';
+
+const SAVE_PATH = '%LOCALAPPDATA%\\Voyage\\Saved\\SaveGames';
+const JUNCTION = `mklink /J "%USERPROFILE%\\Documents\\CaretakerSaves" "${SAVE_PATH}"`;
 
 export default function ImportPage({ ctx }) {
   const [saves, setSaves] = useState(null);
   const [drag, setDrag] = useState(false);
 
-  useEffect(() => {
-    api.get('/api/import/saves').then(setSaves).catch((e) => setSaves({ dirs: [], saves: [], error: e.message }));
-  }, [ctx.lastImport]);
+  const loadSaves = useCallback(() => {
+    api.get('/api/import/saves').then(setSaves)
+      .catch((e) => setSaves({ supported: true, folder: null, permission: 'none', saves: [], error: e.message }));
+  }, []);
+  useEffect(() => { loadSaves(); }, [loadSaves, ctx.lastImport]);
+
+  // Folder pickers and permission prompts must start from a click; a dismissed picker is not an error.
+  const folderAction = async (fn) => {
+    try {
+      await fn();
+    } catch (err) {
+      if (!err.cancelled) ctx.notify(err.message, 'bad');
+    }
+    loadSaves();
+  };
+  const chooseFolder = () => folderAction(() => api.post('/api/import/folder'));
+  const forgetFolder = () => folderAction(() => api.del('/api/import/folder'));
 
   const onFiles = (files) => {
     const file = files?.[0];
@@ -48,37 +65,112 @@ export default function ImportPage({ ctx }) {
       </label>
 
       <section className="panel">
-        <div className="panel-head">
-          <h2>Saves found on this computer</h2>
-          <button className="btn btn-primary" onClick={ctx.importLatest} disabled={ctx.importing || !saves?.saves.length}>Load latest</button>
+        <div className="panel-head wrap">
+          <h2>Save folder{saves?.folder ? `: ${saves.folder}` : ''}</h2>
+          {saves?.supported && (
+            <span className="head-actions">
+              {saves.folder && <button className="btn btn-ghost btn-small" onClick={forgetFolder} disabled={ctx.importing}>Forget</button>}
+              <button className="btn btn-small" onClick={chooseFolder} disabled={ctx.importing}>
+                {saves.folder ? 'Change folder' : 'Choose save folder'}
+              </button>
+              {saves.permission === 'granted' && (
+                <button className="btn btn-primary btn-small" onClick={ctx.importLatest} disabled={ctx.importing || !saves.saves.length}>
+                  Load latest
+                </button>
+              )}
+            </span>
+          )}
         </div>
-        {!saves ? <Spinner /> : saves.saves.length ? (
-          <table className="table">
-            <thead><tr><th>File</th><th>Folder</th><th>Modified</th><th /></tr></thead>
-            <tbody>
-              {saves.saves.slice(0, 15).map((s) => (
-                <tr key={s.path}>
-                  <td>{s.name}</td>
-                  <td className="muted small">{s.folder}</td>
-                  <td title={s.modified}>{timeAgo(s.modified)}</td>
-                  <td className="num">
-                    <button className="btn btn-small" disabled={ctx.importing} onClick={() => ctx.runImport(() => api.post('/api/import/file', { path: s.path }))}>
-                      Import
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        ) : (
-          <Empty>
-            No saves found{saves.dirs.length ? ` in ${saves.dirs.join(', ')}` : ''}. Set the save folder in{' '}
-            <a href="#/data/settings">Data → Settings</a>, or drop a file above.
-          </Empty>
-        )}
+        <SavesBody saves={saves} ctx={ctx} />
       </section>
 
       {last && <ImportResult last={last} ctx={ctx} />}
+    </div>
+  );
+}
+
+function SavesBody({ saves, ctx }) {
+  if (!saves) return <Spinner />;
+  if (saves.error) return <div className="callout callout-bad">Couldn't read the save folder: {saves.error}</div>;
+  if (!saves.supported) {
+    return (
+      <div className="callout">
+        This browser can't open folders, so saves can't load automatically. Use Chrome or Edge for that, or drop a .sav file above.
+      </div>
+    );
+  }
+  if (!saves.folder) {
+    return (
+      <>
+        <p>Choose the game's save folder once, and the planner can load your newest save with one click.</p>
+        <FolderHint />
+      </>
+    );
+  }
+  if (saves.permission === 'prompt') {
+    return (
+      <div className="callout">
+        The browser needs your OK to read <strong>{saves.folder}</strong> again.{' '}
+        <button className="btn btn-primary btn-small" onClick={ctx.importLatest} disabled={ctx.importing}>Allow and load latest</button>
+        <p className="muted small">Choose "Allow on every visit" when the browser asks, and the newest save loads by itself next time.</p>
+      </div>
+    );
+  }
+  if (saves.permission !== 'granted') {
+    return (
+      <div className="callout callout-warn">
+        Access to <strong>{saves.folder}</strong> is blocked. Choose the folder again, or allow it in the browser's site settings.
+      </div>
+    );
+  }
+  if (!saves.saves.length) {
+    return (
+      <>
+        <Empty>No .sav files in {saves.folder} or its subfolders.</Empty>
+        <FolderHint />
+      </>
+    );
+  }
+  return (
+    <table className="table">
+      <thead><tr><th>File</th><th>Folder</th><th>Modified</th><th /></tr></thead>
+      <tbody>
+        {saves.saves.slice(0, 15).map((s) => (
+          <tr key={s.path}>
+            <td>{s.name}</td>
+            <td className="muted small">{s.folder}</td>
+            <td title={s.modified}>{timeAgo(s.modified)}</td>
+            <td className="num">
+              <button className="btn btn-small" disabled={ctx.importing} onClick={() => ctx.runImport(() => api.post('/api/import/file', { path: s.path }))}>
+                Import
+              </button>
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function FolderHint() {
+  const [copied, setCopied] = useState(false);
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(JUNCTION);
+      setCopied(true);
+    } catch { /* clipboard blocked; the command is selectable */ }
+  };
+  return (
+    <div className="muted small">
+      <p>On Windows the game keeps saves in <code>{SAVE_PATH}</code>. Pick that SaveGames folder.</p>
+      <p>
+        If the browser says it can't open the folder because it contains system files, run this once in Command Prompt.
+        Then pick <code>Documents\CaretakerSaves</code> instead:
+      </p>
+      <p>
+        <code>{JUNCTION}</code>{' '}
+        <button className="btn btn-small" onClick={copy}>{copied ? 'Copied' : 'Copy'}</button>
+      </p>
     </div>
   );
 }

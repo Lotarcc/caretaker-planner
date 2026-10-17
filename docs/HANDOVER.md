@@ -49,15 +49,13 @@ This is the biggest risk. As far as I remember, Chromium's File System Access bl
 
 ### 2. Finish the UI for the browser version
 
-- `client/App.jsx`:
-  - after the first `reload()`, call `api.post('/api/import/auto')`; if `imported`, reload and notify;
-  - the "Can't reach the server" text becomes a generic start-up error;
-  - in `runImport`, ignore errors with `err.cancelled` (the user dismissed a picker).
-- `client/pages/Import.jsx`: the saves panel still expects the old shape (`saves.dirs`) and will crash. `GET /api/import/saves` now returns `{ supported, folder, permission, saves }`. Show:
-  - **Choose save folder** / **Change folder** (`POST /api/import/folder`) and **Forget** (`DELETE /api/import/folder`);
-  - **Grant access** when `permission === 'prompt'` (any import call with `ask: true` requests it; it must come from a click);
-  - a notice for Firefox/Safari (`supported: false`): drag and drop only;
-  - the path hint and the junction tip from step 1.
+- **Done (2026-10-17):** `client/App.jsx` auto-imports after the first load, shows a generic start-up error, and ignores cancelled pickers. `client/pages/Import.jsx` has a new saves panel:
+  - Choose / Change / Forget folder;
+  - "Allow and load latest" when the permission is `prompt`;
+  - a blocked-access notice and an unsupported-browser notice;
+  - the path hint, and the junction tip with a Copy button. The tip is worded conditionally until step 1 is tested on Windows.
+
+  Checked in the built preview: both saves import by drag and drop, and the overview and solver work under `/caretaker-planner/`. The real folder picker, the permission prompts and auto-import still need a check in Chrome on Windows (step 1).
 - `client/pages/DataEditor.jsx` (Settings): remove the `saveDir` text field (lines ~189 and ~261). Add **Export backup** (download `GET /api/backup` as JSON) and **Import backup** (`POST /api/backup`), since all data now lives in the browser.
 - README: rewrite "Run it" and "How it works" for the static app: the Pages URL, `npm run dev`, Chrome/Edge for the folder feature, data in browser storage, and the GPL note for `ooz-wasm`.
 

@@ -52,7 +52,19 @@ export default function App() {
       setError(err.message);
     }
   }, []);
-  useEffect(() => { reload(); }, [reload]);
+  // After the first load, pull in the newest save when the browser still grants access to the save folder.
+  useEffect(() => {
+    reload().then(async () => {
+      try {
+        const auto = await api.post('/api/import/auto');
+        if (!auto.imported) return;
+        await reload();
+        notify(`Loaded your newest save: ${auto.result.memories} memories and ${auto.result.foods} foods`, 'good');
+      } catch (err) {
+        notify(`Couldn't load the newest save: ${err.message}`, 'bad');
+      }
+    });
+  }, [reload, notify]);
 
   // Overview (status per profession) depends on inventory, data and settings; refresh with a short debounce.
   const overviewKey = state ? JSON.stringify([state.inventory, state.settings, state.memories, state.foods, state.professions]) : '';
@@ -101,7 +113,7 @@ export default function App() {
       notify(`Imported ${result.memories} memories and ${result.foods} foods`, 'good');
       return result;
     } catch (err) {
-      notify(err.message, 'bad');
+      if (!err.cancelled) notify(err.message, 'bad');
       return null;
     } finally {
       setImporting(false);
@@ -127,7 +139,7 @@ export default function App() {
   }), [state, overview, overviewBusy, pod, setPod, setQty, setInventory, reload, notify, runImport, importLatest, importing]);
 
   let page;
-  if (error && !state) page = <div className="page"><div className="callout callout-bad">Can't reach the server: {error}</div></div>;
+  if (error && !state) page = <div className="page"><div className="callout callout-bad">The planner couldn't start: {error}</div></div>;
   else if (!ctx) page = <div className="page"><Spinner label="Loading…" /></div>;
   else if (route.startsWith('/p/')) page = <Profession ctx={ctx} id={decodeURIComponent(route.slice(3))} />;
   else if (route === '/import') page = <ImportPage ctx={ctx} />;
