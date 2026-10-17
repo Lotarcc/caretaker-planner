@@ -9,6 +9,10 @@ import { extractSave } from '../shared/save/items.js';
 // The in-browser API, run in Node: same routes, storage in memory, compute called directly.
 const compute = { overview, solve, extract: async (bytes) => extractSave(new Uint8Array(bytes)) };
 
+// The beta save fixture isn't published; skip when it's absent.
+const BETA = 'test/fixtures/beta-update6.sav';
+const noBeta = !fs.existsSync(BETA) && `${BETA} missing; save tests need local fixtures`;
+
 async function withServer(fn) {
   const store = new Store(memoryStorage());
   const handle = createLocalApi({ store, compute });
@@ -32,8 +36,8 @@ test('seeds data including unverified extra memories', () => withServer(async (c
   ]);
 }));
 
-test('upload import, solve, grow and undo', () => withServer(async (call) => {
-  const imp = await call('UPLOAD', '/import/upload', new File([fs.readFileSync('test/fixtures/beta-update6.sav')], 'beta.sav'));
+test('upload import, solve, grow and undo', { skip: noBeta }, () => withServer(async (call) => {
+  const imp = await call('UPLOAD', '/import/upload', new File([fs.readFileSync(BETA)], 'beta.sav'));
   assert.equal(imp.status, 200);
   assert.ok(imp.body.memories > 100);
   assert.deepEqual(imp.body.unmapped, {});

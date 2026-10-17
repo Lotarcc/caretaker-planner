@@ -4,3 +4,4 @@ data/caretaker.db*
 *.bin
 .env
 __pycache__/
+test/fixtures/*.sav

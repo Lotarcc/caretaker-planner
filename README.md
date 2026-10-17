@@ -37,6 +37,8 @@ Tests:
 npm test
 ```
 
+The save-file tests need fixtures that aren't published (`test/fixtures/prebeta.sav` and `test/fixtures/beta-update6.sav`, gitignored). Without them, those tests are skipped.
+
 Environment variables (all optional): `PORT` (5174), `HOST` (127.0.0.1), `CARETAKER_DB` (`data/caretaker.db`),
 `CARETAKER_SAVE_DIR` (extra save folder). The save folder can also be set in **Data → Settings**. On Linux and Steam Deck,
 Proton prefixes under `~/.steam/steam/steamapps/compatdata/*` are searched automatically.

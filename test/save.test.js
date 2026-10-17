@@ -10,11 +10,13 @@ const FIXTURES = {
   prebeta: { file: 'test/fixtures/prebeta.sav', compressor: 'zlib', build: 651238 },
   beta: { file: 'test/fixtures/beta-update6.sav', compressor: 'oodle-kraken', build: 653002 },
 };
+// The save fixtures aren't published; the tests that need them skip when they're absent.
+const skip = (fx) => !fs.existsSync(fx.file) && `${fx.file} missing; save tests need local fixtures`;
 const read = (f) => JSON.parse(fs.readFileSync(`data/source/${f}.json`, 'utf8'));
 const db = { memories: read('Memory'), foods: read('Food') };
 
 for (const [name, fx] of Object.entries(FIXTURES)) {
-  test(`${name}: chunks decode to GVAS and extract owned items`, () => {
+  test(`${name}: chunks decode to GVAS and extract owned items`, { skip: skip(fx) }, () => {
     const { gvas, compressor } = decodeChunks(fs.readFileSync(fx.file));
     assert.equal(compressor, fx.compressor);
     assert.equal(gvas.subarray(0, 4).toString('latin1'), 'GVAS');
@@ -41,7 +43,7 @@ for (const [name, fx] of Object.entries(FIXTURES)) {
   });
 }
 
-test('beta: storage boxes are not double counted (module components mirror the inventory)', () => {
+test('beta: storage boxes are not double counted (module components mirror the inventory)', { skip: skip(FIXTURES.beta) }, () => {
   const { gvas } = decodeChunks(fs.readFileSync(FIXTURES.beta.file));
   const result = extractFromProperties(parseGvas(gvas).properties);
   assert.equal(result.owned['DA_Food_High-FatEnergy'], 18);
