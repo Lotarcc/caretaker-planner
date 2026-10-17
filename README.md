@@ -1,61 +1,57 @@
 # Caretaker Planner
 
-A local planner for **The Last Caretaker** that replaces thelastcaretaker-tools.com/Calculator and works with the
-**Update 6 "The Jump" public beta** saves (Oodle-compressed, build 653002).
+A planner for **The Last Caretaker** that replaces thelastcaretaker-tools.com/Calculator. It runs entirely in your
+browser (no server, nothing uploaded) and reads the **Update 6 "The Jump" public beta** saves (Oodle-compressed,
+build 653173) as well as older zlib saves.
 
-- **Import your save.** Reads the newest `.sav` from `%LOCALAPPDATA%\Voyage\Saved\SaveGames\<steamid>\`, or a dropped file.
-  It counts memories, foods and nutrient materials in your inventory, storage boxes and containers. Loose world loot is left out.
+**Open it:** https://lotarcc.github.io/caretaker-planner/ (Chrome or Edge for the save-folder feature).
+
+- **Import your save.** Choose the save folder once (`%LOCALAPPDATA%\Voyage\Saved\SaveGames`) and the newest
+  `.sav` loads whenever you open the planner, or drop a `.sav` file on the Import page in any browser. It counts
+  memories, foods and nutrient materials in your inventory, storage boxes and containers. Loose world loot is left out.
 - **See which humans you can grow.** Every profession is marked *Growable*, *Close* or *Far* from what you own.
 - **Click a human:**
   - If you can grow it now, you get the cheapest recipe from your inventory. **Grow** removes those items and logs the human.
   - If you can't, you get **what you need**: the foods to craft (with nutrient totals compared to your stock), the memories still
     to find, and the items from your inventory that the recipe uses.
+- **Committees.** The ten Council of Humanity committees in a recommended order, with each member's live status.
+  From your save it marks which members are already in orbit, which committee to do next, and advice such as
+  launching the Forbidden Fruit pears on their own. **Plan them all** plans every human still to make (plus one for
+  Platform Omega) in one go, sharing your memories and foods where they save the most, and totals the foods to craft,
+  the memories to find and the nutrients to gather.
 - **Pod builder** like the old calculator: add items, see live totals, the weight limit and which professions match.
 - **Data editor** for memories, foods and professions (to fix beta stat changes), plus rule settings (diminishing returns,
-  baselines, pod capacity).
+  baselines, pod capacity) and **backup export/import**: your data lives in this browser only.
 - **Grown log**, plus the grown humans recorded in your save (professions, mutations and final attributes).
 
-## Run it
+## Develop
 
-Needs **Node.js 22.5+** (it uses the built-in `node:sqlite`).
-
-```bash
-npm install
-npm run build     # build the web UI into dist/
-npm start         # http://127.0.0.1:5174
-```
-
-Development (API with auto-restart + Vite dev server on http://localhost:5173):
+Needs Node.js 22+.
 
 ```bash
-npm run dev
+npm ci
+npm run dev       # http://127.0.0.1:5173/caretaker-planner/
+npm test          # Node tests
+npm run check     # Node tests, build, browser journeys (Playwright)
 ```
 
-Tests:
-
-```bash
-npm test
-```
-
-The save-file tests need fixtures that aren't published (`test/fixtures/prebeta.sav` and `test/fixtures/beta-update6.sav`, gitignored). Without them, those tests are skipped.
-
-Environment variables (all optional): `PORT` (5174), `HOST` (127.0.0.1), `CARETAKER_DB` (`data/caretaker.db`),
-`CARETAKER_SAVE_DIR` (extra save folder). The save folder can also be set in **Data → Settings**. On Linux and Steam Deck,
-Proton prefixes under `~/.steam/steam/steamapps/compatdata/*` are searched automatically.
+The save tests and journeys need fixtures that aren't published (`test/fixtures/prebeta.sav` and
+`test/fixtures/beta-update6.sav`, gitignored). Without them, those tests are skipped. `AGENTS.md` has the
+conventions and layout; pushing to `main` tests, builds and deploys to GitHub Pages.
 
 ## How it works
 
 ```
-server/save/chunks.js   UE compressed chunks -> GVAS (zlib pre-beta, Oodle Kraken in the beta via ooz-wasm)
-server/save/gvas.js     GVAS property reader (UE 5.4+ "complete type name" tags, nested ByteData blobs)
-server/save/items.js    owned items + grown humans from the parsed save
-server/importer.js      maps game asset names to DB rows, finds save files
-server/db.js            SQLite schema, seed from data/source, queries
-server/index.js         Express API (+ serves dist/)
-shared/rules.js         attributes, effective value (soft cap), requirement checks (used by server and client)
-shared/solver.js        recipe solver (mixed-integer program)
-shared/milp.js          HiGHS (WASM) adapter
-client/                 React UI
+shared/save/chunks.js   UE compressed chunks -> GVAS (zlib pre-beta, Oodle Kraken in the beta via ooz-wasm)
+shared/save/gvas.js     GVAS property reader (UE 5.4+ "complete type name" tags, nested ByteData blobs)
+shared/save/items.js    owned items, grown humans, committee states and quests from the parsed save
+shared/importer.js      maps game asset names to data rows
+shared/rules.js         attributes, effective value (soft cap), requirement checks
+shared/solver.js        recipe solver (mixed-integer program), shared/milp.js: HiGHS (WASM) adapter
+shared/committees.js    committee rosters, recommended order, progress from a save
+shared/council.js       every remaining human planned together (shared memory and food pool)
+client/local/           the in-browser API, browser storage, Web Workers, save-folder access
+client/pages/           React pages
 ```
 
 ### Which items count as owned
@@ -89,10 +85,11 @@ Within those actors, only real inventory components (with `bAllowNearbyQueries`)
 Each profession is a small mixed-integer program solved with [HiGHS](https://highs.dev) (WASM, `highs` on npm):
 
 - **From inventory:** minimize item count (then weight) subject to every requirement, the weight cap and what you own.
-- **Plan (what you need):** also allows *crafting* foods and *finding* memories. Crafting is charged per item plus the nutrients
-  it uses. Nutrients already in stock are cheap; missing ones cost by scarcity (editable). Finding is expensive, with
-  a penalty for stats nobody asked for. As a result it uses what you have first, crafts from the nutrients you hold, and
-  suggests targeted memories rather than rare all-stat ones.
+- **Plan (what you need):** also allows *crafting* foods and *finding* memories. Crafting is charged per item plus the time
+  to gather the nutrients it uses (seaweed 1, slime and crawlers 3, Bio Flesh 15; editable under Data → Settings).
+  Everything can be gathered again, so nutrients in stock and foods you own are valued at that same cost: the plan
+  minimises total gathering across all your humans instead of spending stocked Bio Flesh on a Tier 1 human.
+  Finding a memory is expensive, with a penalty for stats nobody asked for.
 - Items with identical stats (for example the many cartridges) are treated as interchangeable.
 - Same-or-higher-tier matches are excluded with lazily added big-M constraints.
 
@@ -105,6 +102,6 @@ while HiGHS solves them optimally in milliseconds.
 Four memories found in beta saves are added with empty stats and flagged **unverified**: *Last Bastions*, *Manifest Chant*,
 *Life Jacket* and *Shoes*. Fill them in under **Data**. The import lists any memory or food in a save that is still unknown.
 
-## Licence note
+## Licence
 
-`ooz-wasm` (the Oodle decompressor) is GPL-3.0. Keep that in mind if you redistribute this project.
+GPL-3.0-or-later, because the bundled Oodle decompressor (`ooz-wasm`) is GPL-3.0.

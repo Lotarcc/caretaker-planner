@@ -6,9 +6,11 @@ import { parseGvas, tryParseNested } from '../shared/save/gvas.js';
 import { extractFromProperties } from '../shared/save/items.js';
 import { mapToInventory } from '../shared/importer.js';
 
+// Pinned to snapshots of the developer's own saves: prebeta from 2026-10-06 (build 651238, zlib),
+// beta from 2026-10-17. Replacing a fixture means updating the counts below.
 const FIXTURES = {
-  prebeta: { file: 'test/fixtures/prebeta.sav', compressor: 'zlib', build: 651238 },
-  beta: { file: 'test/fixtures/beta-update6.sav', compressor: 'oodle-kraken', build: 653002 },
+  prebeta: { file: 'test/fixtures/prebeta.sav', compressor: 'zlib', build: 651238, minFoods: 10 },
+  beta: { file: 'test/fixtures/beta-update6.sav', compressor: 'oodle-kraken', build: 653173, minFoods: 1 },
 };
 // The save fixtures aren't published; the tests that need them skip when they're absent.
 const skip = (fx) => !fs.existsSync(fx.file) && `${fx.file} missing; save tests need local fixtures`;
@@ -38,22 +40,36 @@ for (const [name, fx] of Object.entries(FIXTURES)) {
 
     const { inventory, summary } = mapToInventory(result, db);
     assert.ok(summary.memories > 100);
-    assert.ok(summary.foods > 10);
+    assert.ok(summary.foods >= fx.minFoods);
     assert.equal(typeof inventory.nutrient, 'object');
+    assert.ok(Array.isArray(result.committees));
+    assert.ok(result.quests.length > 0);
   });
 }
 
 test('beta: storage boxes are not double counted (module components mirror the inventory)', { skip: skip(FIXTURES.beta) }, () => {
   const { gvas } = decodeChunks(fs.readFileSync(FIXTURES.beta.file));
   const result = extractFromProperties(parseGvas(gvas).properties);
-  assert.equal(result.owned['DA_Food_High-FatEnergy'], 18);
-  assert.equal(result.owned['DA_Food_Nutri-Core'], 6);
+  // All four sit in one storage box; reading its module component too would make it eight.
+  assert.equal(result.owned['DA_Food_High-FatEnergy'], 4);
   // Items missing from the old database are reported as unmapped.
   const { summary } = mapToInventory(result, db);
   assert.ok('DA_Cartridge_Last_Bastions' in summary.unmapped);
-  assert.equal(mapToInventory(result, db).inventory.nutrient.Omega3, 400);
-  assert.equal(result.humans.length, 2);
+  assert.equal(mapToInventory(result, db).inventory.nutrient.Omega3, 1022);
+  assert.equal(result.humans.length, 5);
   assert.ok(result.humans[1].traits.includes('DA_Profession_Room_Supervisor'));
+});
+
+test('beta: committee states and quests are read from the save', { skip: skip(FIXTURES.beta) }, () => {
+  const { gvas } = decodeChunks(fs.readFileSync(FIXTURES.beta.file));
+  const result = extractFromProperties(parseGvas(gvas).properties);
+  assert.deepEqual(result.committees.map((c) => [c.key, c.state]), [['HAB_CARE', 'Active']]);
+  const quest = (id) => result.quests.find((q) => q.id === id)?.status;
+  assert.equal(quest('DA_Quest_CU3_HabitatCommittee'), 'Completed');
+  assert.equal(quest('DA_Quest_CU5_TheForbiddenFruit'), 'InProgress');
+  // Habitat Care's four members went up in one launch.
+  const delivered = result.humans.filter((h) => h.status === 'Delivered').flatMap((h) => h.traits);
+  for (const p of ['Room_Supervisor', 'Health_Assistant', 'Teacher', 'Lab_Technician']) assert.ok(delivered.includes(`DA_Profession_${p}`), p);
 });
 
 test('nested property blobs need the leading zero byte', () => {

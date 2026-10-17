@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "caretaker-planner",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev", "--", "--port", "5173", "--strictPort"],
+      "port": 5173
+    },
+    {
+      "name": "caretaker-planner-preview",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": ["-c", "npm run build && exec npx vite preview --port 4173 --strictPort"],
+      "port": 4173
+    }
+  ]
+}

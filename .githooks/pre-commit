@@ -1,0 +1,8 @@
+#!/usr/bin/env bash
+# Every commit: the unit tests. The browser journeys need a build and take longer; `npm run check` runs
+# everything before a push.
+#
+# Enable once per clone:  git config core.hooksPath .githooks
+set -euo pipefail
+cd "$(git rev-parse --show-toplevel)"
+npm test --silent

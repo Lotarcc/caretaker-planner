@@ -53,9 +53,22 @@ test('plan mode crafts foods and lists memories to find', () => {
   assert.ok(res.craft.count > 0, 'crafts foods for Strength');
   assert.ok(res.find.length > 0, 'needs more Focus/Discipline/Leadership memories');
   assert.ok(res.totals.weight <= settings.podCapacity);
-  // Prefers foods whose nutrients are in stock (Muscle Fortification uses VitaminD).
-  assert.ok(res.recipe.some((r) => r.name === 'Muscle Fortification' && r.craft > 0));
-  assert.deepEqual(res.craft.shortfall, {});
+});
+
+test('plan mode minimises gathering: no Bio Flesh food for a Tier 1 human, even from stock', () => {
+  // Stocked Bio Flesh nutrients and an owned Ultimate Genesis still have to be regathered for a later human, so
+  // seaweed foods win wherever they can do the job.
+  const engineer = byName(professions, 'profession', 'Maintenance Engineer');
+  const inv = inventoryOf({
+    memory: { Blueprints: 2, "Commander's Log": 2, Crayon: 2, Guitar: 2 },
+    food: { 'Ultimate Genesis': 5 },
+    nutrient: { Bioregulator: 100, Nanite_Nutrient: 100, Mitochondrial_Amplifier: 100 },
+  });
+  const res = solve({ profession: engineer, professions, memories, foods, inventory: inv, settings, mode: 'plan' });
+  assert.equal(res.feasible, true);
+  const bioFlesh = new Set(foods.filter((f) => f.Bioregulator || f.Nanite_Nutrient || f.Mitochondrial_Amplifier).map((f) => f.name));
+  const used = res.recipe.filter((r) => bioFlesh.has(r.name)).map((r) => r.name);
+  assert.deepEqual(used, []);
 });
 
 test('overview marks growable / close / far', () => {

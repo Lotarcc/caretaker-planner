@@ -34,6 +34,9 @@ function actorClass(name) {
   return m ? m[1] : name;
 }
 
+// "EVoyageCommitteeState::Active" -> "Active"
+const enumName = (v) => String(v ?? '').replace(/^.*::/, '');
+
 function itemCount(entry) {
   const n = entry.value?.Data?.ItemCount;
   // Non-stackable items store 0; they still represent one item.
@@ -103,7 +106,7 @@ export function extractFromProperties(properties) {
 
   const humans = (world.HumanGrow ?? []).map((h) => ({
     id: h.UniqueID,
-    status: String(h.Type ?? '').replace(/^.*::/, ''),
+    status: enumName(h.Type),
     timestamp: h.Timestamp || null,
     deliveredAt: h.DeliveryTimestamp || null,
     traits: (h.Traits ?? []).map((t) => String(t).replace(/^.*\./, '')),
@@ -113,6 +116,20 @@ export function extractFromProperties(properties) {
         Math.round(Number(p.value) * 100) / 100,
       ]),
     ),
+  }));
+
+  // Committees the game has started tracking, keyed by its own short codes (e.g. HAB_CARE). Only committees
+  // that reached some state are present, so an absent committee means "not started".
+  const committees = (world.CommitteeData?.entries ?? []).map((e) => ({
+    key: String(e.key),
+    state: enumName(e.value?.State),
+    updatedAt: e.value?.LastStateUpdateTimestamp || null,
+  }));
+
+  const quests = (world.Quests?.QuestState?.entries ?? []).map((e) => ({
+    id: e.key?.PrimaryAssetName ?? String(e.key),
+    status: enumName(e.value?.Status),
+    updatedAt: e.value?.LastUpdate || null,
   }));
 
   return {
@@ -127,6 +144,8 @@ export function extractFromProperties(properties) {
     worldLoot: Object.fromEntries([...worldLoot].sort()),
     holders,
     humans,
+    committees,
+    quests,
     zeroCountAssets: [...zeroCounts],
   };
 }

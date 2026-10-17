@@ -5,6 +5,7 @@ import Profession from './pages/Profession.jsx';
 import ImportPage from './pages/Import.jsx';
 import DataEditor from './pages/DataEditor.jsx';
 import Grown from './pages/Grown.jsx';
+import Committees from './pages/Committees.jsx';
 import { Spinner, timeAgo } from './components/ui.jsx';
 
 function useHashRoute() {
@@ -145,6 +146,7 @@ export default function App() {
   else if (route === '/import') page = <ImportPage ctx={ctx} />;
   else if (route.startsWith('/data')) page = <DataEditor ctx={ctx} tab={route.split('/')[2]} />;
   else if (route === '/grown') page = <Grown ctx={ctx} />;
+  else if (route === '/committees') page = <Committees ctx={ctx} />;
   else page = <Planner ctx={ctx} />;
 
   const section = route.startsWith('/p/') ? '/' : route.startsWith('/data') ? '/data' : route;
@@ -158,7 +160,7 @@ export default function App() {
           Caretaker Planner
         </a>
         <nav className="nav">
-          {[['/', 'Planner'], ['/import', 'Import'], ['/data', 'Data'], ['/grown', 'Grown']].map(([to, label]) => (
+          {[['/', 'Planner'], ['/committees', 'Committees'], ['/import', 'Import'], ['/data', 'Data'], ['/grown', 'Grown']].map(([to, label]) => (
             <a key={to} href={`#${to}`} className={section === to ? 'active' : ''}>{label}</a>
           ))}
         </nav>

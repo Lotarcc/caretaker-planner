@@ -33,10 +33,11 @@ export const DEFAULT_SETTINGS = {
   baselineMode: 'add', // 'add': requirement + baseline (old site's display); 'max': max(requirement, baseline)
   podCapacity: 100, // kg
   closeThreshold: 0.8, // coverage at or above this counts as "close"
-  // Relative scarcity used to rank craft plans (higher = avoid using).
+  // Time to gather one unit, relative to seaweed. Everything can be gathered again, so the planner minimises the
+  // total: seaweed (basic) 1, slime and crawlers 3, Bio Flesh from big enemies 15 (docs/research/2026-10-17-human-plan.md).
   nutrientCost: {
-    Protein: 1, Fat: 1, Carbohydrate: 1, Calcium: 2, VitaminD: 2, Omega3: 2,
-    Bioregulator: 6, Nanite_Nutrient: 6, Mitochondrial_Amplifier: 6,
+    Protein: 1, Fat: 1, Carbohydrate: 1, Calcium: 3, VitaminD: 3, Omega3: 3,
+    Bioregulator: 15, Nanite_Nutrient: 15, Mitochondrial_Amplifier: 15,
   },
 };
 

@@ -33,6 +33,7 @@ const solverWorker = () => (solverCall ??= rpc(spawn()));
 export const compute = {
   overview: (input) => solverWorker()('overview', input),
   solve: (input) => solverWorker()('solve', input),
+  council: (input) => solverWorker()('council', input),
   async extract(bytes) {
     const worker = spawn();
     try {

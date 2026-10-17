@@ -5,3 +5,7 @@ data/caretaker.db*
 .env
 __pycache__/
 test/fixtures/*.sav
+test-results/
+playwright-report/
+.claude/worktrees/
+.claude/skills/

@@ -226,9 +226,25 @@ export class Store {
     return structuredClone(this.doc);
   }
 
+  /** Replaces everything with a backup. Checked first: a half-valid document saved here would stop the app starting. */
   importAll(doc) {
-    if (!doc || !Array.isArray(doc.professions)) throw new Error('Not a Caretaker Planner backup');
-    this.doc = { inventory: {}, grown: [], settings: {}, nextGrownId: 1, ...structuredClone(doc) };
+    const isObject = (v) => v != null && typeof v === 'object' && !Array.isArray(v);
+    const bad = (why) => { throw Object.assign(new Error(`Not a Caretaker Planner backup: ${why}`), { status: 400 }); };
+    if (!isObject(doc)) bad('not a JSON object');
+    for (const table of Object.keys(TABLES)) {
+      if (!Array.isArray(doc[table])) bad(`no ${table} list`);
+      if (doc[table].some((r) => !isObject(r) || !r.id)) bad(`a row in ${table} has no id`);
+    }
+    if (!doc.professions.length) bad('no professions');
+    for (const key of ['inventory', 'settings']) if (doc[key] != null && !isObject(doc[key])) bad(`${key} is not an object`);
+    if (doc.grown != null && !Array.isArray(doc.grown)) bad('grown is not a list');
+    const next = { ...structuredClone(doc) };
+    next.inventory ??= {};
+    next.settings ??= {};
+    next.grown ??= [];
+    next.nextGrownId = Number(next.nextGrownId) || next.grown.reduce((m, g) => Math.max(m, Number(g.id) || 0), 0) + 1;
+    for (const table of Object.keys(TABLES)) next[table] = next[table].map((r) => this.normalize(table, r));
+    this.doc = next;
     this.save();
   }
 }
