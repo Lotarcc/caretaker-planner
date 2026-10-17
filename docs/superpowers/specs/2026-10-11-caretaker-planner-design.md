@@ -40,9 +40,17 @@ Items appear as `Items: Map<Int, VoyageItemSerialize>` whose value struct holds:
 Some maps sit inside `ByteData: Array<Byte>` blobs, which are nested property streams.
 Top level: `SlotName`, `PlatformUserIndex`, `GameProgress` (Map<Str, GameProgress>, key e.g. `voyageworld2`), `PlayerData` (PersistentPlayerData).
 
-**Open task:** count **player inventory + containers only** (user decision), excluding loose world loot.
-Walk the GVAS tree properly and identify which actors/components own each `Items` map (player inventory,
-storage containers, and so on). Use the two fixtures to compare.
+**Resolved (implemented in `server/save/items.js`):** count **player inventory + containers only** (user decision),
+excluding loose world loot. Findings from both fixtures:
+- The decompressed payload has a u32 length prefix before `GVAS`. Save game version 3 adds one byte after the class name.
+- `ByteData` blobs are `u8 0` + a property stream + 4 padding bytes. Items live in `PersistentActors[level].actors[id]`
+  under `ComponentData[*].ByteData -> Items`.
+- Owned: `BP_FirstPersonCharacter_New_C` (named inventories Holster/Equipment/Backpack), `BP_Inventory_PlayerBox*`,
+  `BP_Inventory_Container_*`, `BP_Boat_*`. World: `BP_DynamicMeshActor_C`, `BP_DynamicSkeletalMeshActor_C`, `BP_Memory_Drawing_*`, etc.
+- Only inventory components count (they have `bAllowNearbyQueries`). Storage boxes also carry a module component that
+  mirrors their items, which would double-count. The player's unnamed inventory is a catalog (one of every known item).
+- Nutrient materials (`DA_Material_Food_*`) are imported too, so craft plans can be compared against stock.
+- `HumanGrow` holds grown-human results (traits = profession + mutations, final attribute values). Shown on the Grown page.
 
 ### Item mapping
 The game's `DA_*` names are matched to DB rows by `internal_name` (comma-separated aliases, e.g. `DA_ItemLoot_Teddy_01, DA_ItemLoot_Teddy_02`).
@@ -78,7 +86,7 @@ so the user can edit them. Report unmapped `DA_Memory_*/DA_Food_*/DA_Cartridge_*
 - **Save import:** `POST /api/import/latest` reads the newest `%LOCALAPPDATA%/Voyage/Saved/SaveGames/<steamid>/*.sav`;
   `POST /api/import/upload` takes a dropped file. Both return counts, the list of unmapped items, and the source file and timestamp.
 - **DB tables:** `memories`, `foods`, `professions`, `inventory(item_kind, item_id, qty)`, `grown(id, profession_id, items_json, created_at)`, `settings(key, value)`.
-- **Solver:** `javascript-lp-solver` integer program that minimizes item count (then weight), subject to per-attribute raw >= inverse-DR(required) (+epsilon for strict),
+- **Solver:** (implemented with HiGHS/WASM instead: `javascript-lp-solver` timed out on these models) integer program that minimizes item count (then weight), subject to per-attribute raw >= inverse-DR(required) (+epsilon for strict),
   the weight cap, and qty <= inventory. A "craft" mode lets food quantities exceed inventory: the excess becomes the craft list, summed into nutrient totals.
   Missing memory requirements are reported as "find these" with suggested memories.
 
