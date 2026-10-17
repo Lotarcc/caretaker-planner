@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { decodeChunks } from '../server/save/chunks.js';
-import { parseGvas, tryParseNested } from '../server/save/gvas.js';
-import { extractFromProperties } from '../server/save/items.js';
-import { mapToInventory } from '../server/importer.js';
+import { decodeChunks } from '../shared/save/chunks.js';
+import { parseGvas, tryParseNested } from '../shared/save/gvas.js';
+import { extractFromProperties } from '../shared/save/items.js';
+import { mapToInventory } from '../shared/importer.js';
 
 const FIXTURES = {
   prebeta: { file: 'test/fixtures/prebeta.sav', compressor: 'zlib', build: 651238 },

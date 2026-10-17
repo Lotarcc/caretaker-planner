@@ -1,22 +1,25 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { openDb } from '../server/db.js';
-import { createApp } from '../server/index.js';
+import { Store, memoryStorage } from '../client/local/store.js';
+import { createLocalApi } from '../client/local/server.js';
+import { overview, solve } from '../shared/solver.js';
+import { extractSave } from '../shared/save/items.js';
+
+// The in-browser API, run in Node: same routes, storage in memory, compute called directly.
+const compute = { overview, solve, extract: async (bytes) => extractSave(new Uint8Array(bytes)) };
 
 async function withServer(fn) {
-  const store = openDb(':memory:');
-  const server = createApp(store).listen(0, '127.0.0.1');
-  await new Promise((r) => server.once('listening', r));
-  const base = `http://127.0.0.1:${server.address().port}/api`;
-  const call = async (method, path, body, headers = {}) => {
-    const init = { method, headers };
-    if (Buffer.isBuffer(body)) init.body = body;
-    else if (body !== undefined) { init.body = JSON.stringify(body); init.headers = { ...headers, 'content-type': 'application/json' }; }
-    const res = await fetch(base + path, init);
-    return { status: res.status, body: await res.json() };
+  const store = new Store(memoryStorage());
+  const handle = createLocalApi({ store, compute });
+  const call = async (method, path, body) => {
+    try {
+      return { status: 200, body: await handle(method, `/api${path}`, body) };
+    } catch (err) {
+      return { status: err.status ?? 500, body: { error: err.message } };
+    }
   };
-  try { await fn(call, store); } finally { server.close(); }
+  await fn(call, store);
 }
 
 test('seeds data including unverified extra memories', () => withServer(async (call) => {
@@ -30,7 +33,7 @@ test('seeds data including unverified extra memories', () => withServer(async (c
 }));
 
 test('upload import, solve, grow and undo', () => withServer(async (call) => {
-  const imp = await call('POST', '/import/upload', fs.readFileSync('test/fixtures/beta-update6.sav'), { 'x-file-name': 'beta.sav' });
+  const imp = await call('UPLOAD', '/import/upload', new File([fs.readFileSync('test/fixtures/beta-update6.sav')], 'beta.sav'));
   assert.equal(imp.status, 200);
   assert.ok(imp.body.memories > 100);
   assert.deepEqual(imp.body.unmapped, {});

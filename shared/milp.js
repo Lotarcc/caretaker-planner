@@ -3,7 +3,9 @@
 // and returns { feasible, result, values: {name: number}, optimal }.
 import highsLoader from 'highs';
 
-let highs = await highsLoader();
+// In the browser the app sets HIGHS_LOADER_OPTIONS (e.g. where highs.wasm is served) before importing this.
+const loaderOptions = () => globalThis.HIGHS_LOADER_OPTIONS ?? {};
+let highs = await highsLoader(loaderOptions());
 
 const num = (v) => {
   if (!Number.isFinite(v)) throw new Error(`Non-finite coefficient ${v}`);
@@ -50,7 +52,7 @@ export function solveMilp(model, { timeLimitMs = 2000 } = {}) {
     out = highs.solve(lp, { time_limit: timeLimitMs / 1000, output_flag: false, mip_rel_gap: 1e-6 });
   } catch (err) {
     // A failed solve can leave the WASM instance unusable; start a fresh one next time.
-    highsLoader().then((h) => { highs = h; });
+    highsLoader(loaderOptions()).then((h) => { highs = h; });
     throw err;
   }
   const status = out.Status;

@@ -2,7 +2,9 @@
 // Layout per chunk:
 //   u64 tag, u64 blockSize, u8 compressor, u64 compressedSize, u64 uncompressedSize,
 //   {u64 compressed, u64 uncompressed} * ceil(uncompressedSize / blockSize), then block payloads.
-import zlib from 'node:zlib';
+// Runs in Node and in the browser: `buffer` resolves to Node's built-in or the npm polyfill.
+import { Buffer } from 'buffer';
+import { unzlibSync } from 'fflate';
 import { decompressUnsafe } from 'ooz-wasm';
 
 export const CHUNK_TAG = 0x222222229e2a83c1n;
@@ -15,7 +17,8 @@ export function isChunked(buf) {
   return buf.length >= HEADER_SIZE && buf.readBigUInt64LE(0) === CHUNK_TAG;
 }
 
-export function decodeChunks(buf) {
+export function decodeChunks(input) {
+  const buf = Buffer.isBuffer(input) ? input : Buffer.from(input.buffer, input.byteOffset, input.byteLength);
   if (buf.subarray(0, 4).toString('latin1') === 'GVAS') return { gvas: buf, compressor: 'none' };
   if (!isChunked(buf)) throw new Error('Not a Last Caretaker save: unknown file header');
 
@@ -55,7 +58,10 @@ export function decodeChunks(buf) {
 }
 
 function decompressBlock(block, uncompressed, compressor) {
-  if (compressor === COMPRESSOR_ZLIB) return zlib.inflateSync(block);
+  if (compressor === COMPRESSOR_ZLIB) {
+    const out = unzlibSync(block);
+    return Buffer.from(out.buffer, out.byteOffset, out.byteLength);
+  }
   if (compressor === COMPRESSOR_KRAKEN) {
     const out = Buffer.from(decompressUnsafe(block, uncompressed));
     if (out.length !== uncompressed) throw new Error('Oodle block size mismatch');
