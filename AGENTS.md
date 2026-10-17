@@ -6,8 +6,8 @@ A planner for **The Last Caretaker** that runs entirely in the browser and is pu
 it imports a save, shows which humans you can grow, plans recipes and tracks the ten committees.
 There is no server. The README says what it does for players; this file says how to change it.
 
-**Skills.** `.claude/skills/caretaker-save` copies the user's saves from the gaming PC into
-`test/fixtures`, explains what a save records, and how to re-pin the tests after replacing a fixture.
+**Saves.** Fixtures come from the developer's own saves on their gaming PC. How to fetch them is kept
+out of the repository (a local skill under `.claude/skills/`, gitignored).
 
 ## Hard rules
 
@@ -50,7 +50,7 @@ git config core.hooksPath .githooks
 
 The pre-commit hook runs `npm test`. GitHub Actions runs the tests, the build and the journeys on every
 push to `main`, then deploys to Pages. Without the save fixtures the save tests and save journeys skip;
-get them with the `caretaker-save` skill. In the desktop app, `.claude/launch.json` starts the dev server
+copy your own saves into `test/fixtures/` (see the table at the top of `test/save.test.js`). In the desktop app, `.claude/launch.json` starts the dev server
 (`caretaker-planner`) or the built site (`caretaker-planner-preview`).
 
 ## Layout
@@ -83,7 +83,7 @@ get them with the `caretaker-save` skill. In the desktop app, `.claude/launch.js
   Every control needs an accessible name; a hidden file input gets an `aria-label`.
 - An uncaught error or `console.error` fails the journey even when its assertions pass.
 - Save tests pin counts from specific snapshots. Replacing a fixture means updating those numbers in the
-  same change (see the skill).
+  same change, along with the snapshot table in `test/save.test.js`.
 
 ## Code conventions
 

@@ -6,7 +6,7 @@ import { parseGvas, tryParseNested } from '../shared/save/gvas.js';
 import { extractFromProperties } from '../shared/save/items.js';
 import { mapToInventory } from '../shared/importer.js';
 
-// Pinned to snapshots of the developer's own saves (see .claude/skills/caretaker-save): prebeta from 2026-10-06,
+// Pinned to snapshots of the developer's own saves: prebeta from 2026-10-06 (build 651238, zlib),
 // beta from 2026-10-17. Replacing a fixture means updating the counts below.
 const FIXTURES = {
   prebeta: { file: 'test/fixtures/prebeta.sav', compressor: 'zlib', build: 651238, minFoods: 10 },
