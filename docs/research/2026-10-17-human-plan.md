@@ -50,7 +50,7 @@ If your live save differs, re-scan it and rerun the planner.
 - **Cost = nutrients you must craft**, weighted by how hard each is to farm:
   Protein/Fat/Carbohydrate (seaweed) **1**, Calcium/Vitamin D/Omega-3 (slime, crawlers) **3**,
   Bioregulator/Nanite Nutrient/Mitochondrial Amplifier (Bio Flesh from big enemies) **15**.
-  Food you already own is free. Each memory consumed costs 1, and Ash Notebook 5, Oath Token 5, Porcine Vocal Interface 3,
+  Food you already own is free, and nutrients in stock cost 5% of full price. Each memory consumed costs 1, and Ash Notebook 5, Oath Token 5, Porcine Vocal Interface 3,
   to keep rare items for where they matter. The weights are constants at the top of the script.
 - **Memories are a shared, finite pool.** All 41 recipes are optimised together, so scarce memories go where they save the most.
 - **Soft cap:** effective = raw up to 200, then 200 + about (raw−200)^0.6, using the community's measured table.
@@ -65,29 +65,43 @@ If your live save differs, re-scan it and rerun the planner.
   Recipes meet the higher value and avoid the lower one, so they work under either.
 - Pod capacity 100 kg.
 
-## 4. Results (all 41 humans)
+## 4. Results (all 41 humans), and whether your stock covers them
+
+The plan is optimised against the save's nutrient stock: nutrients you already hold are nearly free.
+That's why it leans on your big Omega-3 surplus (88 Neuro-Boost for Intellect and Life Expectancy) instead of Mind Surge, which needs a lot of Protein.
+
+| Nutrient | Plan needs | In stock | **To gather** |
+|---|---|---|---|
+| Protein | 2264 | 137 | **2127** |
+| Fat | 1274 | 364 | **910** |
+| Carbohydrate | 1172 | 159 | **1013** |
+| Calcium | 282 | 205 | **77** |
+| Vitamin D | 363 | 218 | **145** |
+| Omega-3 | 898 | 886 | **12** |
+| Bioregulator | 43 | 66 | enough |
+| Nanite Nutrient | 71 | 64 | **7** |
+| Mitochondrial Amplifier | 135 | 70 | **65** |
 
 | | |
 |---|---|
-| Food to craft | 318 Physique Fuel, 166 Nutri-Core, 129 Mind Surge, 38 Ultimate Genesis, 15 High-Fat, 7 Muscle Fortification, 5 Hyper-Evolution, 3 Nanite Infusion |
-| Nutrients to craft | Protein 3135, Fat 1515, Carbohydrate 1338 · Vitamin D 84, Omega-3 14, Calcium 10 · **Mitochondrial Amplifier 195, Nanite Nutrient 65, Bioregulator 43** |
-| Owned food used | All 48 High-Fat, 32 Nutri-Core, 15 Physique Fuel, 8 Mind Surge, 7 Immune Boost and most of the rest |
-| Memories used | 513 items. Many common memories run out exactly: The Art of War, Where's Tommy, Biology Notes, Stopwatch, Mystery Box, Compass, Meditation, Assembly Instructions, Commander's Log, Small Tree, Plans, Guitar, Guitar Slinger |
-| Memories still to find | none |
-| Rare items | Only 2 of 11 Ash Notebooks (Neural Architect, Doctor) and 4 of 9 Porcine Vocal Interfaces. Ash Notebooks set every mental stat to 100+, which tends to trigger other professions |
+| Food to craft | 303 Physique Fuel, 144 Nutri-Core, 88 Neuro-Boost, 54 Mind Surge, 23 Ultimate Genesis, 16 High-Fat, 14 Hyper-Evolution, 8 Muscle Fortification, 3 Mitochondrial Surge, 1 Bone-Fortify |
+| Owned food used | All of it |
+| Memories | 461 used, **none missing**. Many common ones run out exactly (The Art of War, Where's Tommy, Biology Notes, Stopwatch, Compass, Meditation, Assembly Instructions, Cards, Commander's Log, Small Tree, Plans) |
+| Rare items | 2 of 11 Ash Notebooks, 5 of 9 Porcine Vocal Interfaces |
+| Raw materials in the save | Bio Seaweed 605, Bio Organic 3376, Bio Dark 714, Bio Light 194, **Bio Flesh 5** |
 
-Main takeaways:
-- **Ultimate Genesis is the only big advanced-nutrient cost:** 38 crafts = 190 of the 195 Mitochondrial Amplifier.
-  Height, Intellect and Life Expectancy above about 150 are where the Bio Flesh goes. Strength and Weight come cheap from Physique Fuel and High-Fat.
-- The five most expensive humans are Colonel of Humanity, Logistics High Command, Quantum Physicist, Existential Chancellor and Guardian of Humanity (500–860 each).
-  Together they cost about as much as the 20 cheapest.
-- Memory is the real limit: the plan uses almost all your common memories.
-  If you plan 60+ humans, keep collecting the cheap memories (books, drawings, toys, Guitar) and cartridges.
-- "Pod kg" stays at or under 100 for every recipe.
+**Verdict:** you have enough memories, but not enough nutrients. The big gap is basic Protein/Fat/Carbohydrate (about 4,000 units, all from seaweed),
+plus 65 Mitochondrial Amplifier and 7 Nanite Nutrient from Bio Flesh. You hold only 5 Bio Flesh, so hunt big enemies.
+Calcium and Vitamin D gaps are small. Conversion rates from raw materials aren't reliably documented, so check one Soilforge batch in game:
+one guide gives 200 g of seaweed giving 0.2 kg Protein and 0.2 kg Carbohydrate per batch.
 
-\* *Nutrient cost* = weighted cost if every food in that recipe were crafted.
-The plan's real spend is lower because owned food is used first.
-Some recipes cost slightly more than their standalone best (for example Guardian +75 and Quantum Engineer +51): the shared optimiser gave those humans different memories because others needed the scarce ones.
+Takeaways:
+- Ultimate Genesis and Hyper-Evolution are the only real Bio Flesh costs. They cover Height, Intellect and Life Expectancy above about 150.
+- The most expensive humans are Colonel of Humanity, Quantum Physicist, Logistics High Command, Existential Chancellor and Theoretical Scientist.
+  Together they cost more than the 20 cheapest. If you're short, make them last.
+- Pod weight stays at or under 100 kg for every recipe.
+
+\* *Nutrient cost* = weighted cost if every food in that recipe were crafted, a rough measure of how expensive each human is.
 The joint solve ran for 10 minutes. CBC reported "Optimal", but PuLP also reports that when it stops at the time limit, so treat it as the best plan found, not a proven minimum.
 
 ## 4b. Per-human recipes
@@ -97,97 +111,97 @@ The joint solve ran for 10 minutes. CBC reported "Optimal", but PuLP also report
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Maintenance Engineer | 1 | 1× High-Fat, 1× Nutri-Core, 10× Physique Fuel | 1× Lonelies, 1× Blueprints, 1× Plans | 25.8 | 107 |
-| Basic Supplier | 1 | 21× Physique Fuel | 1× Where's Tommy, 2× Assembly Instructions | 44.2 | 168 |
-| Nutrient Handler | 1 | 1× Ultimate Genesis, 1× Mind Surge, 22× Physique Fuel | 1× Survival Diagrams, 1× Stopwatch, 1× Music Notes, 1× Basketball | 50.6 | 294 |
-| Door Jammer | 1 | 4× Nutri-Core, 10× Physique Fuel | 1× Commander's Log, 2× Crayon | 29.5 | 116 |
+| Maintenance Engineer | 1 | 7× Nutri-Core, 6× Physique Fuel | 1× Encyclopedia, 1× Plans, 1× Crayon, 1× Guitar | 30.25 | 111 |
+| Basic Supplier | 1 | 21× Physique Fuel | 2× Assembly Instructions, 2× Guitar | 47.2 | 168 |
+| Nutrient Handler | 1 | 1× Ultimate Genesis, 23× Physique Fuel | 2× Mystery Box, 1× Maps, 1× Crayon | 52.25 | 289 |
+| Door Jammer | 1 | 4× Nutri-Core, 10× Physique Fuel | 1× Commander's Log, 1× Guitar | 31 | 116 |
 
 ### Habitat Care
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Room Supervisor | 1 | 10× Nutri-Core, 2× Mind Surge | 1× The Art of War, 1× Small Human Art | 26 | 116 |
-| Health Assistant | 1 | 4× High-Fat, 6× Nutri-Core, 2× Physique Fuel | 2× Teddy Bear, 1× Love Letters, 1× Small Tree | 27.3 | 142 |
-| Teacher | 2 | 12× Nutri-Core, 25× Physique Fuel | 2× Biology Notes, 3× Stopwatch, 2× Plans, 1× Basketball | 80.6 | 308 |
-| Lab Technician | 1 | 1× Ultimate Genesis, 2× Endura-Growth, 2× Nutri-Core, 1× Physique Fuel | 1× Poushki, 1× Programming Manual, 1× Encyclopedia | 14.3 | 197 |
+| Room Supervisor | 1 | 1× Endura-Growth, 6× Nutri-Core, 2× Mind Surge, 3× Physique Fuel | 1× The Art of War, 1× Small Human Art | 26 | 137 |
+| Health Assistant | 1 | 3× High-Fat, 10× Nutri-Core | 2× Tommy, 1× Love Letters, 1× Stopwatch | 30 | 144 |
+| Teacher | 2 | 4× High-Fat, 2× Ultimate Genesis, 2× Hyper-Evolution, 1× Nutri-Core | 1× Poushki, 2× Biology Notes, 4× Camera | 23.3 | 441 |
+| Lab Technician | 1 | 1× Endura-Growth, 8× Nutri-Core, 3× Neuro-Boost | 2× Mystery Box, 2× Encyclopedia | 29 | 249 |
 
 ### Transit & Distribution
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Systems Engineer | 2 | 1× High-Fat, 14× Physique Fuel | 1× Starshine, 3× Assembly Instructions, 1× Small Tree | 33.6 | 130 |
-| Distributor | 2 | 3× Ultimate Genesis, 3× Physique Fuel | 1× Lonelies, 2× Blueprints, 1× Assembly Instructions, 1× Small Tree, 1× Plans | 16.4 | 339 |
-| Growth Specialist | 2 | 1× Ultimate Genesis, 27× Physique Fuel | 2× The Art of War, 3× Mystery Box, 4× Music Notes, 1× Basketball | 65.1 | 321 |
-| Guard | 2 | 25× Physique Fuel | 1× The Art of War, 1× Commander's Log, 2× Small Tree, 2× Crayon, 3× Guitar | 61.5 | 200 |
+| Systems Engineer | 2 | 1× High-Fat, 14× Physique Fuel | 1× PECO Athletics - Javelin, 2× Assembly Instructions, 1× Plans | 32.5 | 130 |
+| Distributor | 2 | 3× Ultimate Genesis, 1× Nutri-Core, 2× Physique Fuel | 2× Programming Manual, 2× Commander's Log, 2× Crayon, 4× Guitar | 24.5 | 340 |
+| Growth Specialist | 2 | 1× Ultimate Genesis, 1× Nutri-Core, 26× Physique Fuel | 1× The Art of War, 3× Mystery Box, 4× Music Notes, 1× Maps, 1× Basketball | 65.1 | 322 |
+| Guard | 2 | 25× Physique Fuel | 1× Where's Tommy, 3× Compass, 1× Commander's Log, 2× Small Tree | 58 | 200 |
 
 ### Power & Security
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Energy Engineer | 3 | 2× Muscle Fortification, 19× Physique Fuel | 3× Where's Tommy, 4× Assembly Instructions, 2× Small Tree, 2× Plans, 2× Crayon, 4× Guitar | 60.9 | 242 |
-| Resource Director | 3 | 3× Ultimate Genesis, 1× Nanite Infusion, 2× Nutri-Core, 2× Physique Fuel | 1× Where's Tommy, 11× Compass, 4× Assembly Instructions, 4× Commander's Log, 1× Guitar | 36.4 | 413 |
-| Station Quartermaster | 2 | 8× Nutri-Core, 8× Mind Surge | 2× The Art of War, 2× Small Human Art, 1× Cards | 37 | 176 |
-| Station Protector | 3 | 1× Immune Boost, 35× Physique Fuel | 6× Commander's Log, 3× Crayon, 10× Guitar | 98.75 | 313 |
+| Energy Engineer | 3 | 1× High-Fat, 3× Bone-Fortify, 4× Muscle Fortification, 4× Physique Fuel | 2× Turbulence, 1× Programming Manual, 3× Assembly Instructions, 5× Small Tree | 34.9 | 365 |
+| Resource Director | 3 | 3× Ultimate Genesis, 1× Hyper-Evolution, 1× Nutri-Core, 2× Physique Fuel | 2× Angerkoski, 1× Programming Manual, 3× Assembly Instructions, 6× Small Tree | 26.4 | 415 |
+| Station Quartermaster | 2 | 1× Ultimate Genesis, 2× Nutri-Core, 1× Mind Surge, 2× Neuro-Boost | 2× The Art of War, 3× Cards | 17 | 232 |
+| Station Protector | 3 | 37× Physique Fuel | 1× Where's Tommy, 9× Compass, 1× Meditation, 1× Commander's Log, 7× Small Tree | 96 | 296 |
 
 ### Cognitive Resilience
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Theoretical Scientist | 3 | 3× Ultimate Genesis, 1× Mind Surge, 1× Neuro-Boost | 1× Programming Manual, 3× Mystery Box, 5× Encyclopedia, 3× Small Tree, 1× Basketball | 25.6 | 376 |
-| Neuro Specialist | 3 | 13× High-Fat, 6× Nutri-Core | 3× Biology Notes, 9× Small Human Art, 7× Stopwatch, 1× Encyclopedia, 1× Basketball | 57.1 | 288 |
-| Professor | 3 | 1× High-Fat, 12× Nutri-Core, 4× Immune Boost, 24× Physique Fuel | 3× The Art of War, 1× Love Letters, 6× Biology Notes, 6× Small Tree, 1× Plans, 1× Basketball | 99.6 | 450 |
-| Star Analyzer | 2 | 17× Nutri-Core, 10× Physique Fuel | 1× Poushki | 54.3 | 233 |
+| Theoretical Scientist | 3 | 2× Nutri-Core, 1× Physique Fuel, 11× Neuro-Boost | 2× PECO Athletics - 100m Dash, 1× Love Letters, 4× Encyclopedia, 1× Sudoku Book | 34.6 | 554 |
+| Neuro Specialist | 3 | 13× High-Fat, 6× Nutri-Core | 2× Fluctuations, 1× Porcine Vocal Interface, 4× Love Letters | 44.1 | 288 |
+| Professor | 3 | 13× Nutri-Core, 5× Immune Boost, 23× Physique Fuel | 7× Biology Notes, 6× Stopwatch, 5× Camera, 1× Basketball | 97.1 | 466 |
+| Star Analyzer | 2 | 17× Nutri-Core, 10× Physique Fuel | 1× Chiptropolis Cartridge | 54.3 | 233 |
 
 ### Culture & Memory
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Visual Technician | 1 | 9× Nutri-Core, 4× Mind Surge | 1× Music Notes, 1× Cards | 27.5 | 133 |
-| Sculptor | 2 | 7× Nutri-Core, 10× Mind Surge | 1× Porcine Vocal Interface | 35.5 | 193 |
-| Cultural Archivist | 3 | 3× Nutri-Core, 22× Mind Surge | 1× Porcine Vocal Interface | 51.5 | 313 |
-| Manual Holder | 1 | 9× Nutri-Core, 15× Physique Fuel | 2× Love Letters, 2× Mystery Box, 2× Camera, 1× Bowling Pin | 56.5 | 201 |
+| Visual Technician | 1 | 1× Ultimate Genesis, 4× Nutri-Core | 1× Music Notes, 1× Cards | 11.5 | 141 |
+| Sculptor | 2 | 1× Ultimate Genesis, 1× Endura-Growth, 1× Nutri-Core, 3× Neuro-Boost | 1× Porcine Vocal Interface | 13.5 | 291 |
+| Cultural Archivist | 3 | 5× Nutri-Core, 16× Mind Surge, 3× Neuro-Boost | 1× Porcine Vocal Interface | 49.5 | 397 |
+| Manual Holder | 1 | 9× Nutri-Core, 15× Physique Fuel | 2× Biology Notes, 3× Mystery Box, 2× Camera | 55.5 | 201 |
 
 ### Governance & Logistics
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Settlement Governor | 3 | 6× Nutri-Core, 14× Mind Surge | 5× The Art of War, 4× Small Human Art, 3× Cards | 52 | 236 |
-| Logistics High Command | 4 | 2× Ultimate Genesis, 6× Hyper-Evolution, 3× Nanite Infusion | 13× Where's Tommy, 11× Programming Manual, 11× Compass, 2× Assembly Instructions, 13× Small Tree, 2× Plans, 1× Guitar | 81.7 | 852 |
-| Biosphere Director | 3 | 4× Ultimate Genesis | 3× PECO Athletics - Triple Jump, 4× The Art of War | 12.9 | 420 |
-| Guardian of Humanity | 4 | 1× Ultimate Genesis, 2× Immune Boost, 2× Muscle Fortification, 30× Physique Fuel | 2× Where's Tommy, 22× Meditation, 15× Commander's Log, 1× Guitar | 100 | 501 |
+| Settlement Governor | 3 | 1× Ultimate Genesis, 7× Mind Surge, 2× Neuro-Boost | 4× The Art of War, 1× Survival Diagrams, 7× Cards | 31.5 | 292 |
+| Logistics High Command | 4 | 1× Ultimate Genesis, 10× Hyper-Evolution, 1× Physique Fuel | 4× Meditation, 3× Assembly Instructions, 8× Commander's Log, 10× Sudoku Book, 3× Plans, 3× Crayon, 25× Guitar | 99.55 | 863 |
+| Biosphere Director | 3 | 3× Ultimate Genesis, 9× Physique Fuel | 3× The Art of War, 9× Mystery Box, 6× Music Notes, 1× Maps | 44.5 | 387 |
+| Guardian of Humanity | 4 | 3× Mitochondrial Surge, 29× Physique Fuel | 2× Where's Tommy, 9× Compass, 17× Meditation, 13× Commander's Log, 2× Small Tree | 99.5 | 502 |
 
 ### Deep Systems
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Quantum Engineer | 4 | 2× Bone-Fortify, 1× Mitochondrial Surge, 1× Nutri-Core, 5× Muscle Fortification, 10× Physique Fuel | 9× Sudoku Book, 9× Plans, 14× Crayon, 18× Guitar | 95.5 | 494 |
-| Quantum Physicist | 4 | 7× Ultimate Genesis, 3× Mind Surge | 16× Mystery Box, 11× Encyclopedia, 7× Sudoku Book, 1× Basketball | 62.6 | 774 |
+| Quantum Engineer | 4 | 1× Mitochondrial Surge, 6× Muscle Fortification, 13× Physique Fuel | 16× Where's Tommy, 5× Programming Manual, 1× Compass, 4× Assembly Instructions, 8× Small Tree, 2× Plans | 78.4 | 464 |
+| Quantum Physicist | 4 | 25× Neuro-Boost | 4× PECO Athletics - Javelin, 11× Encyclopedia, 7× Sudoku Book, 1× Basketball | 69.8 | 1200 |
 | Neural Architect | 4 | 24× High-Fat, 3× Nutri-Core | 1× Ash Notebook, 1× Teddy Bear, 3× Love Letters | 58.4 | 459 |
-| Sustenance Architect | 4 | 4× Ultimate Genesis, 1× Nutri-Core, 3× Mind Surge | 6× Guitar Slinger, 2× PECO Athletics - Javelin, 11× Survival Diagrams, 1× Basketball | 24.5 | 468 |
+| Sustenance Architect | 4 | 4× Ultimate Genesis, 1× Nutri-Core, 2× Neuro-Boost | 9× Starshine, 5× The Art of War, 1× Survival Diagrams | 22.2 | 525 |
 
 ### Meaning & Frontier
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Existential Expressionist | 4 | 1× Nutri-Core, 33× Mind Surge | 1× PECO Athletics - Javelin, 2× Porcine Vocal Interface | 71.3 | 438 |
-| Frontier Explorer | 4 | 39× Nutri-Core, 4× Mind Surge | 5× Keys to Imagination, 1× Travel Journal | 88.5 | 403 |
-| Mission Seeker | 3 | 27× Nutri-Core, 1× Mind Surge, 4× Physique Fuel | 3× Turbulence | 64.9 | 288 |
-| Colonel of Humanity | 4 | 4× Ultimate Genesis, 1× Endura-Growth, 31× Mind Surge | 13× The Art of War, 7× Teddy Bear, 12× Cards | 99.8 | 856 |
+| Existential Expressionist | 4 | 5× Nutri-Core, 31× Mind Surge | 1× Second Reality, 2× Porcine Vocal Interface | 75.3 | 448 |
+| Frontier Explorer | 4 | 23× Nutri-Core, 4× Mind Surge, 8× Physique Fuel, 4× Neuro-Boost | 2× PECO Athletics - Triple Jump, 4× Breakdown Cartridge | 79.8 | 515 |
+| Mission Seeker | 3 | 27× Nutri-Core, 1× Mind Surge, 4× Physique Fuel | 3× Keys to Imagination | 64.9 | 288 |
+| Colonel of Humanity | 4 | 1× Ultimate Genesis, 1× Endura-Growth, 2× Nutri-Core, 30× Neuro-Boost | 12× The Art of War, 1× Survival Diagrams, 17× Cards | 97.5 | 1596 |
 
 ### Field Continuance
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Field Research Scientist | 2 | 2× Ultimate Genesis, 1× Endura-Growth | 1× Starshine, 2× Encyclopedia | 8.3 | 243 |
-| Existential Chancellor | 4 | 10× High-Fat, 3× Ultimate Genesis, 1× Nanite Infusion, 2× Nutri-Core, 2× Physique Fuel | 13× Biology Notes, 12× Stopwatch, 4× Mystery Box, 21× Camera, 1× Bowling Pin | 83 | 593 |
-| Station Roamer | 1 | 4× Nutri-Core, 10× Physique Fuel | 1× Travel Journal, 2× Crayon | 29.5 | 116 |
+| Field Research Scientist | 2 | 1× Ultimate Genesis, 1× Nutri-Core, 4× Neuro-Boost | 1× Programming Manual, 3× Mystery Box, 1× Encyclopedia | 18.5 | 306 |
+| Existential Chancellor | 4 | 9× High-Fat, 2× Hyper-Evolution, 2× Nanite Infusion, 5× Nutri-Core, 2× Immune Boost, 11× Physique Fuel | 3× The Art of War, 13× Biology Notes, 16× Stopwatch, 11× Plans, 1× Basketball | 99.1 | 639 |
+| Station Roamer | 1 | 4× Nutri-Core, 10× Physique Fuel | 1× PECO Athletics - Triple Jump | 28.3 | 116 |
 | Doctor | 2 | 8× High-Fat, 5× Nutri-Core, 2× Physique Fuel | 1× Ash Notebook | 31 | 205 |
 
 ### Platform Omega (Project Jonah)
 
 | Profession | T | Food | Memories | Pod kg | Nutrient cost* |
 |---|---|---|---|---|---|
-| Maintenance Engineer | 1 | 1× High-Fat, 1× Nutri-Core, 10× Physique Fuel | 1× Second Reality, 1× Assembly Instructions, 1× Small Tree | 26.4 | 107 |
+| Maintenance Engineer | 1 | 1× High-Fat, 2× Nutri-Core, 9× Physique Fuel | 1× Blueprints, 1× Commander's Log, 1× Crayon, 1× Guitar | 27.75 | 108 |
 
 
 ## 5. Spares and extra humans
