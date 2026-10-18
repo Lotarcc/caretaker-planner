@@ -102,7 +102,11 @@ function SavesBody({ saves, ctx }) {
   if (!saves.folder) {
     return (
       <>
-        <p>Choose the game's save folder once, and the planner can load your newest save with one click.</p>
+        <p>
+          <strong>Load latest save</strong> (top right) asks for the SaveGames folder and loads the newest save in it. The
+          browser asks you to confirm each time. To skip that, choose the folder here once; if the browser refuses it as a
+          system folder, use the command below.
+        </p>
         <FolderHint />
       </>
     );
@@ -186,7 +190,7 @@ function ImportResult({ last, ctx }) {
   const unverified = ctx.memories.filter((m) => m.unverified && ctx.inventory.memory[m.id]);
 
   return (
-    <section className="panel">
+    <section className="panel" aria-label="Last import">
       <div className="panel-head">
         <h2>Last import</h2>
         <span className="muted small">{last.source?.name} · imported {timeAgo(last.importedAt)}</span>

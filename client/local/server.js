@@ -172,7 +172,7 @@ export function createLocalApi({ store = new Store(), compute, folder = null }) 
     return { imported: true, result: await fromSave(newest) };
   });
   on('UPLOAD', '/api/import/upload', ({ body }) =>
-    importFile(body, { type: 'upload', name: body.name, modified: body.lastModified ? new Date(body.lastModified).toISOString() : null }));
+    importFile(body, { type: 'upload', name: body.name, path: body.webkitRelativePath || null, modified: body.lastModified ? new Date(body.lastModified).toISOString() : null }));
 
   // ---- planning ----
   const planInput = () => ({ ...catalog(), inventory: store.inventory(), settings: store.rules() });

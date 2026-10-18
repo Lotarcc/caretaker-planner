@@ -24,4 +24,4 @@ export const api = {
   upload: (file) => request('UPLOAD', '/api/import/upload', file),
 };
 
-export { folderSupported } from './local/folder.js';
+export { folderSupported, newestSave } from './local/folder.js';
