@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { api } from './api.js';
+import { api, newestSave } from './api.js';
 import Planner from './pages/Planner.jsx';
 import Profession from './pages/Profession.jsx';
 import ImportPage from './pages/Import.jsx';
@@ -121,7 +121,25 @@ export default function App() {
     }
   }, [notify, reload]);
 
-  const importLatest = useCallback(() => runImport(() => api.post('/api/import/latest')), [runImport]);
+  // With a remembered save folder the browser may still read, load its newest save directly. Otherwise ask for the
+  // folder with a plain folder picker: Chrome refuses to open %LOCALAPPDATA% through showDirectoryPicker (system
+  // folder), and that picker starts in Documents, so the remembered-folder route can't reach the game's saves.
+  const folderInput = useRef(null);
+  const importLatest = useCallback(async () => {
+    let saves = null;
+    try { saves = await api.get('/api/import/saves'); } catch { /* fall back to the picker */ }
+    // A remembered folder without saves (Documents, picked by mistake) must not stop the picker from showing.
+    const usable = saves?.folder && (saves.permission === 'prompt' || (saves.permission === 'granted' && saves.saves.length > 0));
+    if (usable) return runImport(() => api.post('/api/import/latest'));
+    folderInput.current?.click();
+    return null;
+  }, [runImport]);
+  const onFolderPicked = useCallback((input) => {
+    const newest = newestSave(input.files ?? []);
+    input.value = '';
+    if (newest) runImport(() => api.upload(newest));
+    else notify('No game saves in that folder. Choose SaveGames or the numbered folder inside it.', 'bad');
+  }, [runImport, notify]);
 
   const ctx = useMemo(() => state && ({
     ...state,
@@ -176,6 +194,7 @@ export default function App() {
         </div>
       </header>
       <main>{page}</main>
+      <input ref={folderInput} type="file" webkitdirectory="" hidden aria-label="Save folder" onChange={(e) => onFolderPicked(e.target)} />
       {toast && (
         <div key={toast.id} className={`toast toast-${toast.tone}`} role="status" onClick={() => setToast(null)}>
           {toast.message}
